@@ -1,0 +1,78 @@
+---
+title: "Sample Analysis Report"
+author: "Clusta Genomics"
+date: "2024-05-15"
+output:
+  pdf_document: default
+---
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+rm(list=ls(all.names = TRUE))
+
+library(pacman)
+pacman::p_load(dplyr,janitor,pheatmap, patchwork, RColorBrewer, readr, readxl, cowplot, ggthemes, ggrepel, ggalluvial, tidyverse, tibble)
+
+custom_colors <- list()
+colors_dutch <- c(
+  '#6F1E51','#C4E538','#12CBC4','#FDA7DF','#ED4C67',
+  '#F79F1F','#A3CB38','#1289A7','#D980FA','#B53471',
+  '#EE5A24','#009432','#0652DD','#9980FA','#833471',
+  '#EA2027','#006266','#1B1464','#5758BB','#FFC312'
+  )
+colors_spanish <- c(
+  '#40407a','#706fd3','#f7f1e3','#34ace0','#33d9b2',
+  '#2c2c54','#474787','#aaa69d','#227093','#218c74',
+  '#ff5252','#ff793f','#d1ccc0','#ffb142','#ffda79',
+  '#b33939','#cd6133','#84817a','#cc8e35','#ccae62'
+)
+custom_colors$discrete <- c(colors_dutch, colors_spanish)
+
+##Formats
+niceFormat <- function(number) {
+  formatC(number, format = 'f', big.mark = ',', digits = 0)
+}
+```
+
+Sequencing Report for all the samples
+```{r, echo=FALSE, warning=FALSE, comment=FALSE}
+##Read the dataset generated from kraken
+kraken_report <- readr::read_tsv("/Users/collinsmisita/eDocuments/099_OceansM/cgenomics/results/testdata_merged_kreports.tsv")
+
+##Generate a table of top specie
+table <- kraken_report %>%  gather(key="sampleID", val="count", 2:6) %>% filter(rank=='species') %>%  slice_max(n=1, count, by="sampleID")
+table %>% knitr::kable(caption = "Top Specie Per Sample")
+
+###Plot absolute abundance of top species
+kraken_report %>% 
+    gather(key="sampleID", val="count", 2:6) %>%
+    filter(rank=='species') %>%
+    slice_max(n=5, count, by="sampleID") %>%
+    ggplot(., aes(x=name, y=count, fill=sampleID)) +
+    geom_bar(position = 'dodge', stat = 'identity') +
+    theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) +
+    scale_fill_manual(name = 'Sample IDs', values = custom_colors$discrete) + coord_cartesian(clip = 'off') +
+    scale_y_continuous(name = 'Absolute Abundance', labels = scales::comma, expand = c(0.01,0)) + theme_bw() +
+    ggtitle("Top 5 Species across all samples") +
+    theme(legend.position = 'right', plot.title = element_text(hjust = 0.5), text = element_text(size = 12),
+        panel.grid.major = element_blank(), panel.grid.minor = element_blank(), axis.title.x = element_blank(),
+        axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1), plot.margin = margin(t = 20, r = 0, b = 0, l = 0, unit = 'pt'))
+
+##Plot relative abundance of top 20 species.
+kraken_report %>% 
+    gather(key="sampleID", val="count", 2:6) %>%
+    filter(rank=='species') %>%
+    slice_max(n=20, count, by="sampleID") %>%
+    ggplot(., aes(x=name, y=count, fill=sampleID)) +
+    geom_bar(position = 'fill', stat = 'identity') +
+    theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) +
+    scale_fill_manual(name = 'Sample IDs', values = custom_colors$discrete) + coord_cartesian(clip = 'off') +
+    scale_y_continuous(name = 'Relative Abundance', labels = scales::comma, expand = c(0.01,0)) + theme_bw() +
+    ggtitle("Top 20 Species across all samples") +
+    theme(legend.position = 'right', plot.title = element_text(hjust = 0.5), text = element_text(size = 12),
+        panel.grid.major = element_blank(), panel.grid.minor = element_blank(), axis.title.x = element_blank(),
+        axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1), plot.margin = margin(t = 20, r = 0, b = 0, l = 0, unit = 'pt'))
+
+
+
+
+```
